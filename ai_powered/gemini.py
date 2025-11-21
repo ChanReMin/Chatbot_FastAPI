@@ -27,7 +27,12 @@ def classify_intent(prompt: str) -> str:
     prompt_lower = prompt.lower()
     
     # Intent tìm sản phẩm
-    product_keywords = ["tìm", "mua", "sản phẩm", "gợi ý", "áo", "quần", "đồ", "giới thiệu", "phù hợp", "đề xuất"]
+    product_keywords = [
+    # --- Vietnamese ---
+    "tìm", "mua", "sản phẩm", "gợi ý", "giới thiệu", "phù hợp", "đề xuất", "rượu", "vang", "chai", "loại", "xem", "chi tiết", "đỏ", "trắng", "hồng", "sparkling", "champagne", "ngọt", "đậm", "chát",
+
+    # --- English ---
+    "find", "buy", "product", "suggest", "recommend", "recommendation", "suitable", "introduce", "wine", "red", "white", "rose", "sparkling", "champagne", "bottle", "type", "view", "detail", "sweet", "dry", "bold", "tannic", "fruity",]
     if any(kw in prompt_lower for kw in product_keywords):
         print(f"[INTENT RULE] User hỏi: {prompt} => search_product")
         return "search_product"
@@ -146,7 +151,7 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
         except Exception as e:
             knowledge_text = f"Lỗi khi tìm kiếm trong database: {str(e)}"
     else:
-        answer = "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi liên quan đến thời trang, sản phẩm hoặc chính sách shop."
+        answer = "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi liên quan đến rượu vang, tư vấn hương vị hoặc chính sách cửa hàng."
 
     # Tìm lại gợi ý sản phẩm gần nhất trong lịch sử chat nếu không có product_list_text mới
     last_product_suggestion = ""
@@ -161,11 +166,12 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
     # ĐẢM BẢO: Nếu product_list_text có giá trị, luôn đưa vào prompt_for_ai
     fashion_instruction = (
         "Luôn ưu tiên trả lời dựa trên thông tin dưới đây nếu có. "
-        "Nếu không có thông tin liên quan, chỉ trả lời các câu hỏi về thời trang. "
+        "Nếu không có thông tin liên quan, chỉ trả lời các câu hỏi về rượu vang, tư vấn rượu, hương vị và gợi ý sản phẩm phù hợp."
         "Nếu người dùng hỏi 'chatbot là gì' hoặc các câu hỏi tương tự về bản thân bạn, hãy trả lời: "
-        "'Tôi là trợ lý AI thời trang, được thiết kế để hỗ trợ tư vấn đặt hàng và các nội dung liên quan đến thời trang.'"
-        "\nNếu có danh sách sản phẩm bên dưới, hãy luôn hiển thị lại rõ ràng cho người dùng, không được bỏ qua hoặc chỉ nói chung chung."
-        "\nNếu người dùng trả lời ngắn gọn (ví dụ: 'có', 'mẫu đầu', 'mẫu 2', 'xem chi tiết', 'màu xanh'), hãy dựa vào câu hỏi cuối cùng của bạn trong lịch sử hội thoại để hiểu ý định và trả lời đúng trọng tâm."
+        "'Tôi là trợ lý AI của WineStore, được thiết kế để hỗ trợ tư vấn lựa chọn rượu vang và các nội dung liên quan đến bán rượu.'"
+        "\nNếu có danh sách rượu vang bên dưới, hãy luôn hiển thị lại rõ ràng cho người dùng, không được bỏ qua hoặc trả lời chung chung."
+        "\nNếu người dùng trả lời ngắn gọn (ví dụ: 'có', 'chai đầu', 'loại 2', 'xem chi tiết', 'vang đỏ', 'loại trắng'), "
+        "hãy dựa vào câu hỏi cuối cùng của bạn trong lịch sử hội thoại để hiểu ý định và trả lời đúng trọng tâm."
     )
     prompt_for_ai = f"{fashion_instruction}\n\n"
     if history_text:
