@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Environment
+.env
+.venv/
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Cache
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Bytecode
+*.egg-info/
+dist/
+build/
+
+# Media & Data folders
+media/
+uploads/
+data/
+
+# ChromaDB
+chroma_db/
+*.db
+
+# Jupyter
+*.ipynb_checkpoints/
+
+# Tests
+.coverage
+htmlcov/
+.tox/

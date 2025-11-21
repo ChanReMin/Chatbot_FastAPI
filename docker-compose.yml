@@ -1,0 +1,70 @@
+# ============================================
+# Docker Compose Configuration
+# FastAPI Chatbot + PostgreSQL
+# ============================================
+
+version: "3.8"
+
+services:
+  # PostgreSQL Database (COMMENTED - not deployed yet)
+  # Uncomment this entire postgres service when ready to deploy database
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: fashion-postgres
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres123
+  #     POSTGRES_DB: fashion_db
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - chatbot_network
+
+  # FastAPI Chatbot Application
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatbot_fastapi
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - ./media:/app/media
+      - ./chromadb_data:/app/chromadb_data
+    environment:
+      # Database connection (COMMENTED - not used yet)
+      # - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres123@postgres:5432/fashion_db}
+
+      # API Keys (only GEMINI_API_KEY needed)
+      - PYTHONUNBUFFERED=1
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - BASE_URL=${BASE_URL:-http://localhost:5000}
+    env_file:
+      - .env
+    # COMMENTED: depends_on postgres until DB is deployed
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    restart: unless-stopped
+    command: uvicorn app:app --host 0.0.0.0 --port 5000 --reload
+    networks:
+      - chatbot_network
+
+# COMMENTED: volumes not needed until postgres is enabled
+# volumes:
+#   postgres_data:
+#     driver: local
+
+networks:
+  chatbot_network:
+    driver: bridge
