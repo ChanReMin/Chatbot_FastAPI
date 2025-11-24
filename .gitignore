@@ -36,7 +36,7 @@ dist/
 build/
 
 # Media & Data folders
-media/
+# media/
 uploads/
 data/
 
