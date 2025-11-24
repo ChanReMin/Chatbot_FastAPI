@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException  # , Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi import Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 # from sqlalchemy.orm import Session  # COMMENTED: DB not deployed yet
@@ -14,6 +16,14 @@ app = FastAPI(
     description="AI-powered chatbot for fashion shopping assistance",
     version="1.0.0"
 )
+
+# Custom exception handler để trả về format {"message": ...} thay vì {"detail": ...}
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail}  # FE mong đợi key 'message'
+    )
 
 # Cho phép FE Next.js gọi API (CORS)
 app.add_middleware(
@@ -90,37 +100,18 @@ async def chat(request: ChatRequest):
     - **chatInput**: Lịch sử chat (optional)
     - **sessionId**: Session ID từ frontend (optional)
     """
-    # Extract prompt from chatInput if not provided directly
-    prompt = request.prompt
-    
-    if not prompt and request.chatInput and len(request.chatInput) > 0:
-        # Lấy message cuối cùng từ user trong chatInput
-        last_user_msg = next(
-            (msg for msg in reversed(request.chatInput) if msg.get('role') == 'user'),
-            None
-        )
-        if last_user_msg:
-            prompt = last_user_msg.get('content')
-    
-    if not prompt:
-        raise HTTPException(
-            status_code=400, 
-            detail="Missing prompt. Provide either 'prompt' field or 'chatInput' with user messages."
-        )
-
     try:
-        # Gọi function xử lý Gemini chat
+        # Gọi function xử lý Gemini chat - để gemini.py tự trích xuất prompt
         result = process_gemini_chat(
-            prompt=request.prompt,
+            prompt=request.prompt,  # Có thể None, gemini.py sẽ xử lý
             chat_input=request.chatInput
         )
         
-        # Kiểm tra kết quả
-        if 'message' in result:
-            # Có lỗi - trả về message như code cũ
+        # Kiểm tra kết quả - xử lý error
+        if 'error' in result:
             raise HTTPException(
                 status_code=result.get('status', 500),
-                detail=result['message']
+                detail=result['error']
             )
         
         # Thành công - trả về output và intent

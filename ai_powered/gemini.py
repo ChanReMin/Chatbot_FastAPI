@@ -13,11 +13,11 @@ except ImportError:
     genai = None
 
 # Đọc nội dung file Word một lần khi khởi động server
-try:
-    DOCX_KNOWLEDGE = load_docx_content("media/Shop_Information_For_Chatbot.docx")
-except Exception as e:
-    DOCX_KNOWLEDGE = ""
-    print(f"Warning: Could not load DOCX file: {e}")
+# try:
+#     DOCX_KNOWLEDGE = load_docx_content("media/Shop_Information_For_Chatbot.docx")
+# except Exception as e:
+#     DOCX_KNOWLEDGE = ""
+#     print(f"Warning: Could not load DOCX file: {e}")
 
 # Lấy BASE_URL từ biến môi trường
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
@@ -80,32 +80,46 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
     """Xử lý chat với Gemini AI - FastAPI compatible
     
     Args:
-        prompt: Câu hỏi của người dùng
-        chat_input: Lịch sử chat (optional)
+        prompt: Câu hỏi của người dùng (có thể None nếu chỉ có chat_input)
+        chat_input: Lịch sử chat dạng [{"role": "user"|"assistant", "content": "..."}]
     
     Returns:
         Dict chứa output, intent và status
     """
+    # Validate chat_input format nếu có
+    if chat_input is not None:
+        if not isinstance(chat_input, list):
+            return {'error': 'chat_input must be a list', 'status': 400}
+        for msg in chat_input:
+            if not isinstance(msg, dict) or 'role' not in msg or 'content' not in msg:
+                return {'error': 'Invalid chat_input format. Each message must have "role" and "content"', 'status': 400}
+    
+    # Trích xuất prompt từ chatInput nếu không có
     if not prompt:
-        # Hỗ trợ lấy prompt từ chatInput (kiểu mới của frontend)
-        history_text = ''
         if isinstance(chat_input, list) and len(chat_input) > 0:
-            # Lấy message cuối cùng của user để phân loại intent
+            # Lấy message cuối cùng từ user
             last_user = next((msg for msg in reversed(chat_input) if msg.get('role') == 'user'), None)
             if last_user:
                 prompt = last_user.get('content')
-
-            recent_messages = chat_input[-5:]
-            # Xây dựng lịch sử hội thoại cho AI
-            for msg in recent_messages:
-                if msg['role'] == 'user':
-                    history_text += f"Người dùng: {msg['content']}\n"
-                else:
-                    history_text += f"Trợ lý: {msg['content']}\n"
+        
         if not prompt:
             return {'error': 'No prompt provided', 'status': 400}
-    else:
-        history_text = ''
+    
+    # LUÔN xây dựng history_text nếu có chat_input (FIX BUG: tránh mất context)
+    history_text = ''
+    if isinstance(chat_input, list) and len(chat_input) > 0:
+        # Lấy 5 tin nhắn gần nhất để tiết kiệm token
+        recent_messages = chat_input[-5:]
+        for msg in recent_messages:
+            role = msg.get('role', 'unknown')
+            content = msg.get('content', '')
+            # Sanitize: giới hạn độ dài mỗi message
+            content = content[:2000] if content else ''
+            
+            if role == 'user':
+                history_text += f"Người dùng: {content}\n"
+            elif role == 'assistant':
+                history_text += f"Trợ lý: {content}\n"
 
     # Phân loại intent
     intent = classify_intent(prompt)
@@ -153,17 +167,7 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
     else:
         answer = "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi liên quan đến rượu vang, tư vấn hương vị hoặc chính sách cửa hàng."
 
-    # Tìm lại gợi ý sản phẩm gần nhất trong lịch sử chat nếu không có product_list_text mới
-    last_product_suggestion = ""
-    if not product_list_text and isinstance(chat_input, list):
-        for msg in reversed(chat_input):
-            if msg.get('role') == 'assistant' and "Dưới đây là các sản phẩm phù hợp" in msg.get('content', ''):
-                last_product_suggestion = msg['content']
-                break
-    if not product_list_text and last_product_suggestion:
-        product_list_text = last_product_suggestion
-
-    # ĐẢM BẢO: Nếu product_list_text có giá trị, luôn đưa vào prompt_for_ai
+    # Xây dựng prompt cho AI
     fashion_instruction = (
         "Luôn ưu tiên trả lời dựa trên thông tin dưới đây nếu có. "
         "Nếu không có thông tin liên quan, chỉ trả lời các câu hỏi về rượu vang, tư vấn rượu, hương vị và gợi ý sản phẩm phù hợp."
@@ -185,10 +189,10 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
     # Gọi Gemini AI
     api_key = os.getenv('GEMINI_API_KEY', '')
     if not api_key:
-        return {'message': 'GEMINI_API_KEY not set in backend environment', 'status': 500}
+        return {'error': 'GEMINI_API_KEY not set in backend environment', 'status': 500}
     
     if genai is None:
-        return {'message': 'google-generativeai not installed', 'status': 500}
+        return {'error': 'google-generativeai not installed', 'status': 500}
     
     try:
         genai.configure(api_key=api_key)
@@ -206,6 +210,6 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
         }
     except Exception as e:
         return {
-            'message': str(e),
+            'error': f'Gemini API error: {str(e)}',
             'status': 500
         }
