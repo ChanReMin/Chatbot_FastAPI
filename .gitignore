@@ -1,53 +1,93 @@
+# ============================================
+# .gitignore - Loại bỏ files không cần commit
+# ============================================
+
 # Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 *.pyc
 *.pyo
 *.pyd
-*.sqlite3
 
-# Environment
-.env
-.venv/
-env/
+# Virtual Environments
 venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDE
+# Environment Variables & Credentials
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS files
+*.swn
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Docker
+# Logs
 *.log
-docker-compose.override.yml
+logs/
+*.log.*
 
-# Cache
-.cache/
-.mypy_cache/
+# Testing & Coverage
 .pytest_cache/
-
-# Bytecode
-*.egg-info/
-dist/
-build/
-
-# Media & Data folders
-# media/
-uploads/
-data/
-
-# ChromaDB
-chroma_db/
-*.db
-
-# Jupyter
-*.ipynb_checkpoints/
-
-# Tests
+.mypy_cache/
+.hypothesis/
 .coverage
 htmlcov/
 .tox/
+*.cover
+.cache/
+
+# Build & Distribution
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+*.whl
+
+# Database Files - Runtime Data
+*.sqlite3
+*.db
+*.db-journal
+chromadb_data/
+chroma_db/
+
+# Media & Uploads - Runtime Data
+media/
+uploads/
+data/
+static/uploads/
+
+# Jupyter Notebooks
+*.ipynb_checkpoints/
+.ipynb_checkpoints/
+
+# Docker
+docker-compose.override.yml
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+*.bak
+*~
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml

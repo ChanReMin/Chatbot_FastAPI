@@ -6,6 +6,8 @@ from .load_docx import load_docx_content
 from langchain_community.vectorstores import Chroma
 from langchain_core.embeddings import Embeddings
 from ai_powered.converter import text_to_vector
+from ai_powered.wine_service import search_wines_service
+from db import ReadSessionLocal
 
 try:
     import google.generativeai as genai
@@ -18,9 +20,6 @@ except ImportError:
 # except Exception as e:
 #     DOCX_KNOWLEDGE = ""
 #     print(f"Warning: Could not load DOCX file: {e}")
-
-# Lấy BASE_URL từ biến môi trường
-BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
 
 def classify_intent(prompt: str) -> str:
     """Phân loại ý định của người dùng"""
@@ -126,29 +125,49 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
     product_list_text = ''
     knowledge_text = ''
     answer = None
+    products_data = []  # Lưu data sản phẩm cho mobile
 
     if intent == "search_product":
-        # COMMENTED: DB search not ready yet - uncomment when DB is deployed
-        # try:
-        #     # Call internal FastAPI search endpoint (localhost)
-        #     search_url = f'{BASE_URL}/api/fashion/search'
-        #     resp = requests.post(search_url, json={'query': prompt}, timeout=10)
-        #     if resp.status_code == 200:
-        #         products = resp.json()
-        #         if products:
-        #             product_list_text = '\n'.join([
-        #                 f"- {p.get('name', '')}: {p.get('description', '')} (Giá: {p.get('price', 'N/A')}) [Xem thêm](...)" for p in products
-        #             ])
-        #             product_list_text = f"Dưới đây là các sản phẩm phù hợp:\n{product_list_text}"
-        #         else:
-        #             product_list_text = "Không tìm thấy sản phẩm phù hợp."
-        #     else:
-        #         product_list_text = f"Không thể lấy dữ liệu sản phẩm (status {resp.status_code})."
-        # except Exception as e:
-        #     product_list_text = f"Lỗi khi tìm kiếm sản phẩm: {str(e)}"
-        
-        # Temporary mock response until DB is ready
-        product_list_text = "Chức năng tìm kiếm sản phẩm tạm thời chưa khả dụng. Database đang được triển khai."
+        try:
+            # Create database session
+            db = ReadSessionLocal()
+            try:
+                # Call service layer directly (no HTTP overhead)
+                products = search_wines_service(prompt, db)
+                
+                # Lưu products data cho mobile app
+                products_data = products if products else []
+                
+                if products:
+                    # Lấy FRONTEND_URL từ .env (mặc định localhost:3000)
+                    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+                    
+                    # Build compact single-line HTML list
+                    product_items = []
+                    for p in products:
+                        # Format price: remove .0 and add thousand separator
+                        price = p.get('price', 0)
+                        formatted_price = f"{int(price):,}".replace(',', '.') if price else 'N/A'
+                        
+                        # Build compact single-line product item (NO <br> tags)
+                        item_html = (
+                            f"<li style='margin-bottom: 8px;'>"
+                            f"<b>{p.get('name', 'Sản phẩm')}</b>: "
+                            f"<i style='color: #666;'>{p.get('description', 'Không có mô tả')}</i> - "
+                            f"<b style='color: #d32f2f;'>{formatted_price} đ</b> | "
+                            f"<a href='{frontend_url}/en/shop/{p.get('id', '')}/{p.get('slug', '')}' target='_blank' rel='noopener noreferrer' style='color: #1976d2; text-decoration: none; font-weight: bold;'>👉 Xem ngay</a>"
+                            f"</li>"
+                        )
+                        product_items.append(item_html)
+                    
+                    product_list_html = ''.join(product_items)
+                    product_list_text = f"Dưới đây là các sản phẩm phù hợp:<ul style='padding-left: 20px; list-style-type: disc;'>{product_list_html}</ul>"
+                else:
+                    product_list_text = "Không tìm thấy sản phẩm phù hợp."
+            finally:
+                db.close()
+        except Exception as e:
+            product_list_text = f"Lỗi khi tìm kiếm sản phẩm: {str(e)}"
     elif intent == "search_knowledge":
         # Tìm kiếm vector trong ChromaDB
         try:
@@ -206,6 +225,7 @@ def process_gemini_chat(prompt: str, chat_input: Optional[List[Dict]] = None) ->
         return {
             'output': answer,
             'intent': intent,
+            'products': products_data,  # Thêm products data cho mobile
             'status': 200
         }
     except Exception as e:

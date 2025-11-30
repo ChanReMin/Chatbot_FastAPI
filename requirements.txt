@@ -40,4 +40,5 @@ langchain-huggingface
 requests==2.31.0
 
 # docker exec -it chatbot_fastapi bash -c "cd /app && python -m ai_powered.build_docx_vector_db"
-
+# docker-compose up --build
+# docker-compose restart fastapi

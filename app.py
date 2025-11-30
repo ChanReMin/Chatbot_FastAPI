@@ -1,19 +1,20 @@
-from fastapi import FastAPI, HTTPException  # , Depends
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict
-# from sqlalchemy.orm import Session  # COMMENTED: DB not deployed yet
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from ai_powered.gemini import process_gemini_chat
-# from routers import search  # COMMENTED: DB search not ready
-# from db import get_db, engine  # COMMENTED: DB not deployed yet
-# from schemas import HealthCheckResponse  # COMMENTED: DB dependent
+from routers import search, embedding
+from db import get_read_db, get_write_db, write_engine
+from schemas import HealthCheckResponse
 
 app = FastAPI(
-    title="Fashion Chatbot API",
-    description="AI-powered chatbot for fashion shopping assistance",
+    title="WineStore Chatbot API",
+    description="AI-powered chatbot for wine shopping assistance and recommendations",
     version="1.0.0"
 )
 
@@ -35,8 +36,8 @@ app.add_middleware(
 )
 
 # Include routers
-# COMMENTED: DB search not ready yet - uncomment when DB is deployed
-# app.include_router(search.router)
+app.include_router(search.router)
+app.include_router(embedding.router)
 
 class ChatRequest(BaseModel):
     prompt: Optional[str] = None  # Optional vì frontend có thể chỉ gửi chatInput
@@ -48,48 +49,38 @@ async def root():
     """Root endpoint - basic info"""
     return {
         "status": "ok",
-        "message": "Fashion Chatbot API is running",
+        "message": "WineStore Chatbot API is running",
         "version": "1.0.0",
         "endpoints": {
             "chat": "POST /chat",
-            "search": "POST /api/fashion/search",
+            "search": "POST /api/wine/search",
+            "embedding": "POST /api/embedding",
             "health": "GET /health-check"
         }
     }
 
 
-@app.get("/health-check")  # , response_model=HealthCheckResponse)
-async def health_check():  # db: Session = Depends(get_db)):
+@app.get("/health-check", response_model=HealthCheckResponse)
+async def health_check(db: Session = Depends(get_read_db)):
     """
-    Health check endpoint - verify API status.
-    
-    COMMENTED: Database connection check disabled until DB is deployed.
-    Uncomment db parameter and connection test when ready.
+    Health check endpoint - verify API status and database connection.
+    Uses READ database for health check (read-only operation).
     
     Returns:
-        Dict with status, message, version
+        HealthCheckResponse with status, message, version, and database connection status
     """
-    # COMMENTED: DB not deployed yet
-    # try:
-    #     db.execute("SELECT 1")
-    #     db_connected = True
-    # except Exception as e:
-    #     db_connected = False
+    try:
+        db.execute(text("SELECT 1"))
+        db_connected = True
+    except Exception as e:
+        db_connected = False
     
-    # return HealthCheckResponse(
-    #     status="ok" if db_connected else "degraded",
-    #     message="API is running" if db_connected else f"API running but database connection failed",
-    #     version="1.0.0",
-    #     database_connected=db_connected
-    # )
-    
-    # Temporary response without DB check
-    return {
-        "status": "ok",
-        "message": "API is running (DB not connected)",
-        "version": "1.0.0",
-        "database_connected": False
-    }
+    return HealthCheckResponse(
+        status="ok" if db_connected else "degraded",
+        message="API is running" if db_connected else "API running but database connection failed",
+        version="1.0.0",
+        database_connected=db_connected
+    )
 
 @app.post("/chat")
 async def chat(request: ChatRequest):

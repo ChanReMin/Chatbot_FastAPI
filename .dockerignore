@@ -1,0 +1,99 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment & Credentials
+.env
+.env.*
+!.env.example
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+Thumbs.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.hypothesis/
+*.cover
+.cache/
+
+# Build & Distribution
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Runtime Data - KHÔNG build vào image
+chromadb_data/
+media/
+uploads/
+data/
+
+# Database Files
+*.sqlite3
+*.db
+*.db-journal
+
+# Documentation (không cần trong runtime)
+README.md
+README*.md
+CHANGELOG.md
+LICENSE
+*.rst
+
+# Docker Files (không cần copy lại)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Jupyter Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# CI/CD (nếu có)
+.github/
+.gitlab-ci.yml
+.travis.yml

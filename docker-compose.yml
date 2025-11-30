@@ -1,34 +1,23 @@
 # ============================================
 # Docker Compose Configuration
-# FastAPI Chatbot + PostgreSQL
+# FastAPI Chatbot - Connects to Java Backend PostgreSQL
+# ============================================
+#
+# ARCHITECTURE:
+# - FastAPI service connects to Java's postgres-write & postgres-read
+# - No local PostgreSQL instances created
+# - Shares winestore-be_app-network (external) with Java backend
+# - ChromaDB data stored in local volume
+#
 # ============================================
 
 version: "3.8"
 
 services:
-  # PostgreSQL Database (COMMENTED - not deployed yet)
-  # Uncomment this entire postgres service when ready to deploy database
-  # postgres:
-  #   image: postgres:15-alpine
-  #   container_name: fashion-postgres
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres123
-  #     POSTGRES_DB: fashion_db
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - chatbot_network
-
+  # ============================================
   # FastAPI Chatbot Application
+  # ============================================
+  # Connects to Java backend's PostgreSQL (postgres-write & postgres-read)
   fastapi:
     build:
       context: .
@@ -41,30 +30,52 @@ services:
       - ./media:/app/media
       - ./chromadb_data:/app/chromadb_data
     environment:
-      # Database connection (COMMENTED - not used yet)
-      # - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres123@postgres:5432/fashion_db}
+      # ============================================
+      # Database Configuration (Java Backend PostgreSQL)
+      # ============================================
+      # FastAPI connects to Java's postgres-write and postgres-read containers
+      # These containers are managed by Java's docker-compose, not here
 
-      # API Keys (only GEMINI_API_KEY needed)
+      - DB_DATABASE=${DB_DATABASE:-winestore}
+
+      # WRITE Database (Java's postgres-write container)
+      - SPRING_DATASOURCE_WRITE_USERNAME=${SPRING_DATASOURCE_WRITE_USERNAME:-user}
+      - SPRING_DATASOURCE_WRITE_PASSWORD=${SPRING_DATASOURCE_WRITE_PASSWORD:-password}
+      - DB_WRITE_HOST=${DB_WRITE_HOST:-postgres-write} # Java container name
+      - DB_WRITE_PORT=${DB_WRITE_PORT:-5432}
+
+      # READ Database (Java's postgres-read container)
+      - SPRING_DATASOURCE_READ_USERNAME=${SPRING_DATASOURCE_READ_USERNAME:-user}
+      - SPRING_DATASOURCE_READ_PASSWORD=${SPRING_DATASOURCE_READ_PASSWORD:-password}
+      - DB_READ_HOST=${DB_READ_HOST:-postgres-read} # Java container name
+      - DB_READ_PORT=${DB_READ_PORT:-5432}
+
+      # ============================================
+      # API Keys & Application Config
+      # ============================================
       - PYTHONUNBUFFERED=1
       - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - BASE_URL=${BASE_URL:-http://localhost:5000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-5000}
+
     env_file:
       - .env
-    # COMMENTED: depends_on postgres until DB is deployed
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+
     restart: unless-stopped
+
     command: uvicorn app:app --host 0.0.0.0 --port 5000 --reload
+
     networks:
-      - chatbot_network
+      - winestore-be_app-network # External network shared with Java backend
 
-# COMMENTED: volumes not needed until postgres is enabled
-# volumes:
-#   postgres_data:
-#     driver: local
+    # NOTE: No depends_on needed because postgres containers are managed by Java's docker-compose
+    # FastAPI will retry connection if postgres is not ready yet (thanks to pool_pre_ping=True in db.py)
 
+# ============================================
+# Networks
+# ============================================
 networks:
-  chatbot_network:
-    driver: bridge
+  winestore-be_app-network:
+    external: true # Must be created by Java backend first: docker network create winestore-be_app-network

@@ -8,7 +8,7 @@ Usage:
 import os
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
-from db import SessionLocal
+from db import WriteSessionLocal  # Use WRITE session for data modification
 from models import Product
 from ai_powered.converter import text_to_vector
 
@@ -18,7 +18,7 @@ load_dotenv()
 
 def generate_embeddings():
     """Generate embeddings for all products without vectors"""
-    db: Session = SessionLocal()
+    db: Session = WriteSessionLocal()  # Use WRITE session for INSERT/UPDATE
     
     try:
         # Get all products without embeddings but have description
@@ -70,10 +70,12 @@ def generate_embeddings():
 
 def test_search():
     """Test vector search after generating embeddings"""
-    db: Session = SessionLocal()
+    from db import ReadSessionLocal  # Use READ session for SELECT operations
+    
+    db: Session = ReadSessionLocal()
     
     try:
-        test_query = "áo thun nam"
+        test_query = "rượu vang đỏ Pháp"
         print(f"\n🧪 Testing search with query: '{test_query}'")
         
         query_vector = text_to_vector(test_query)
@@ -86,9 +88,10 @@ def test_search():
             .all()
         )
         
-        print(f"\n📊 Top 5 results:")
+        print(f"\n📊 Top 5 wine results:")
         for idx, p in enumerate(products, 1):
-            print(f"{idx}. {p.name} - {p.price} VND")
+            country = p.country_of_production or "N/A"
+            print(f"{idx}. {p.name} - {p.price} VND ({country})")
         
         if not products:
             print("⚠️  No results found. Check if embeddings were generated correctly.")

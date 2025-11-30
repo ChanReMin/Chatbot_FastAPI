@@ -3,7 +3,14 @@
 # Optimized for Python 3.11-slim
 # ============================================
 
+# ============================================
 # Stage 1: Build stage
+# ============================================
+# Purpose: Install all Python dependencies including:
+# - SQLAlchemy (ORM for database)
+# - psycopg2-binary (PostgreSQL driver)
+# - pgvector (PostgreSQL vector extension support)
+# ============================================
 FROM python:3.11-slim as builder
 
 # Set environment variables
@@ -15,6 +22,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install system dependencies for building Python packages
+# - gcc, g++: Compile Python C extensions
+# - postgresql-client: psql command-line tool
+# - libpq-dev: PostgreSQL C library headers (needed for psycopg2)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
@@ -22,12 +32,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
+# Copy requirements and install ALL dependencies
+# This includes SQLAlchemy, psycopg2-binary, pgvector, etc.
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --user --no-cache-dir -r requirements.txt
 
+# ============================================
 # Stage 2: Runtime stage
+# ============================================
+# Purpose: Minimal runtime environment with only necessary libraries
+# ============================================
 FROM python:3.11-slim
 
 # Set environment variables
@@ -38,11 +53,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install runtime dependencies only
+# - libpq5: PostgreSQL C library (runtime, smaller than libpq-dev)
+#   Required for psycopg2 to connect to PostgreSQL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python dependencies from builder
+# Copy ALL Python dependencies from builder stage
+# This includes: SQLAlchemy, psycopg2-binary, pgvector, FastAPI, etc.
 COPY --from=builder /root/.local /root/.local
 
 # Copy application code
