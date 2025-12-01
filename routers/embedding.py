@@ -5,7 +5,7 @@ API endpoint for Java backend to trigger embedding generation for specific produ
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from db import get_read_db
+from db import get_write_db
 from models import Product
 from schemas import EmbeddingRequest, EmbeddingResponse
 from ai_powered.converter import text_to_vector
@@ -19,7 +19,7 @@ router = APIRouter(
 @router.post("/embedding", response_model=EmbeddingResponse)
 async def generate_embedding(
     request: EmbeddingRequest,
-    db: Session = Depends(get_read_db)
+    db: Session = Depends(get_write_db)
 ):
     """
     Generate and update embedding vector for a specific product.
