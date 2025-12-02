@@ -108,7 +108,8 @@ async def chat(request: ChatRequest):
         # Thành công - trả về output và intent
         return {
             "output": result.get('output', ''),
-            "intent": result.get('intent', 'unknown')
+            "intent": result.get('intent', 'unknown'),
+            "products": result.get('products', [])
         }
         
     except HTTPException:
