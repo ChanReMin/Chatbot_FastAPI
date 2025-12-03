@@ -55,15 +55,15 @@ logs/
 *.log.*
 
 # Runtime Data - KHÔNG build vào image
-# chromadb_data/
-# media/
+<!-- chromadb_data/
+media/ -->
 uploads/
 data/
 
 # Database Files
-*.sqlite3
+<!-- *.sqlite3
 *.db
-*.db-journal
+*.db-journal -->
 
 # Documentation (không cần trong runtime)
 README.md

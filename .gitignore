@@ -59,11 +59,11 @@ wheels/
 *.whl
 
 # Database Files - Runtime Data
-*.sqlite3
-*.db
-*.db-journal
-chromadb_data/
-chroma_db/
+# *.sqlite3
+# *.db
+# *.db-journal
+# chromadb_data/
+# chroma_db/
 
 # Media & Uploads - Runtime Data
 media/
