@@ -54,7 +54,9 @@ async def root():
         "endpoints": {
             "chat": "POST /chat",
             "search": "POST /api/wine/search",
-            "embedding": "POST /api/embedding",
+            "search_test": "GET /api/wine/search/test",
+            "create_embedding": "POST /api/embedding",
+            "update_embedding": "PUT /api/embedding",
             "health": "GET /health-check"
         }
     }
